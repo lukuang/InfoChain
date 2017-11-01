@@ -24,7 +24,7 @@ class DRCQuery(object):
         self._original_query_data = json.load(open(self._query_path))
         self._queries = {}
         for single_query in self._original_query_data:
-            qid = single_query["qid"]
+            qid = str(single_query["qid"])
             query_string = single_query["query"].lower()
             self._queries[qid] = query_string
 
