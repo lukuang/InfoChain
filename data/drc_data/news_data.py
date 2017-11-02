@@ -45,7 +45,7 @@ class DRCNews(object):
             text_factory = TextFactory(dest_file)
             d = os.path.join(self._src_dir,date)
             for news_file in os.walk(d).next()[2]:
-                did = "%s_%s" %(date,news_file)
+                did = "%s_%s_%s" %(self._qid,date,news_file)
                 news_file = os.path.join(d,news_file)
                 # document_text = html_parser.get_text(news_file)
                 soup = BeautifulSoup(open(news_file).read(),"lxml")
