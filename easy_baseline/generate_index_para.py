@@ -27,10 +27,11 @@ def main():
 
     args.data_path = os.path.realpath(args.data_path)
     args.index_path = os.path.realpath(args.index_path)
-    
+
     corpora_list = get_corpora(args.data_path)
     gene_indri_index_para_file(corpora_list,args.para_file_path,
-                               args.index_path,use_stopper=True)
+                               args.index_path,stemmer=None,
+                               use_stopper=True)
 
 
 if __name__=="__main__":
