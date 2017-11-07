@@ -38,7 +38,7 @@ class DRCNews(object):
         for date in sorted(os.walk(self._src_dir).next()[1]):
             print "write documents for date %s" %(date)
             dest_file = os.path.join(self._dest_dir,date)
-            if not os.path.exists(dest_file):
+            if os.path.exists(dest_file):
                 # if the text of a day is processed before,
                 # skip that day
                 continue
