@@ -52,7 +52,8 @@ class DRCNews(object):
                 for script in soup(["script", "style"]):
                     script.extract()    # rip it out
 
-                document_text = re.sub("\s+"," ",soup.get_text())
+                # document_text = re.sub("\s+"," ",soup.get_text())
+                document_text = soup.get_text()
                 if document_text:
                     text_factory.add_document(did,document_text)
                 else:
