@@ -35,37 +35,44 @@ class DRCNews(object):
             self._day_limit = -1
 
         day_count = self._day_limit
-        for date in sorted(os.walk(self._src_dir).next()[1]):
-            print "write documents for date %s" %(date)
-            dest_file = os.path.join(self._dest_dir,date)
-            if os.path.exists(dest_file):
-                # if the text of a day is processed before,
-                # skip that day
-                continue
-            text_factory = TextFactory(dest_file)
-            d = os.path.join(self._src_dir,date)
-            for news_file in os.walk(d).next()[2]:
-                did = "%s_%s_%s" %(self._qid,date,news_file)
-                news_file = os.path.join(d,news_file)
-                # document_text = html_parser.get_text(news_file)
-                soup = BeautifulSoup(open(news_file).read(),"lxml")
-                for script in soup(["script", "style"]):
-                    script.extract()    # rip it out
-
-                # document_text = re.sub("\s+"," ",soup.get_text())
-                document_text = soup.get_text()
-                if document_text:
-                    text_factory.add_document(did,document_text)
-                else:
+        try:
+            day_files = sorted(os.walk(self._src_dir).next()[1])
+        except StopIteration:
+            print "No documents crawled yet for the query"
+            return
+        else:
+            for date in day_files:
+                if self._day_limit == 0:
+                    break
+                print "write documents for date %s" %(date)
+                self._day_limit -= 1
+                dest_file = os.path.join(self._dest_dir,date)
+                if os.path.exists(dest_file):
+                    # if the text of a day is processed before,
+                    # skip that day
                     continue
-            text_factory.write()
-            self._day_limit -= 1
-            if self._day_limit == 0:
-                break
+                text_factory = TextFactory(dest_file)
+                d = os.path.join(self._src_dir,date)
+                for news_file in os.walk(d).next()[2]:
+                    did = "%s_%s_%s" %(self._qid,date,news_file)
+                    news_file = os.path.join(d,news_file)
+                    # document_text = html_parser.get_text(news_file)
+                    soup = BeautifulSoup(open(news_file).read(),"lxml")
+                    for script in soup(["script", "style"]):
+                        script.extract()    # rip it out
+
+                    # document_text = re.sub("\s+"," ",soup.get_text())
+                    document_text = soup.get_text()
+                    if document_text:
+                        text_factory.add_document(did,document_text)
+                    else:
+                        continue
+                text_factory.write()
+                
 
 
-            if self._debug:
-                break
+                if self._debug:
+                    break
 
 
 
