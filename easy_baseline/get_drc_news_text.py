@@ -19,10 +19,13 @@ def main():
     args=parser.parse_args()
 
     drc_queries =  DRCQuery()
+    count = 0
     for qid in drc_queries.queries:
         print "Generating text for disaster:%s" %(drc_queries.queries[qid])
         single_disaster_news = DRCNews(qid,args.dest_dir,args.day_limit)
         single_disaster_news.write_in_trec_format()
+        count += 1
+        print "There are %d queries yet to be processed" %(len(drc_queries.queries)-count)
 
 if __name__=="__main__":
     main()
