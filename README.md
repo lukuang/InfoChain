@@ -11,7 +11,7 @@ The repository for the InfoChain Project
     - [Path](#path)
     - [Prerequisit](#prerequisite)
     - [Data Processing](#data-processing)
-    - [Easy baseline](#drc)
+    - [Easy Baseline](#drc)
       - [How it works](#how-it-works)
       - [How to run](#how-to-run)
       - [Some advice](#some-advice)
@@ -28,17 +28,17 @@ The repository for the InfoChain Project
   * redundant articles (with same url as one of the previously stored articles) are ignored.
   
  ### DRC:  
-  * news crawled during the DRC project
+  * news crawled during the DRC project from Google news.
   * try to crawl 10 pages of results per day, and the results are limited to the day.
   * no url based redundancy detection is used
      
   
  ### Data Locations:  
   * Pre DRC: can be found in [data/pre_drc_data/path.json](https://github.com/lukuang/InfoChain/blob/master/data/pre_drc_data/path.json)  
-      It includes the paths for news data and the queries.
+      It includes the paths for news data and the queries (disasters).
       
   * DRC: can be found in [data/drc_data/path.json](https://github.com/lukuang/InfoChain/blob/master/data/drc_data/path.json)  
-      It includes the paths for news data, tweets, and the queries.
+      It includes the paths for news data, tweets, and the queries (disasters).
   
 
 ## Code
@@ -46,7 +46,7 @@ The repository for the InfoChain Project
   The code resides in Infolab at:```/infolab/node4/lukuang/code/InfoChain```
   
   ### Prerequisite
-  In order to run the code, you need the have the [utility modules](https://github.com/lukuang/myUtility) I wrote before in   your python module search path. One way to do it is to include the path of the module to the PYTHONPATH environment variable:
+  In order to run the code, you need the have the [utility modules](https://github.com/lukuang/myUtility) I wrote before in   your python module search path. One way to do it is to download the module and include the path of the module to the PYTHONPATH environment variable:
   
   ```$ export PYTHONPATH=/path-contains-module:$PYTHONPATH```
   
@@ -58,22 +58,22 @@ The repository for the InfoChain Project
   ### Data Processing:  
   There are two modules for processing the two data collections:
    * [data/pre_drc_data](https://github.com/lukuang/InfoChain/blob/master/data/pre_drc_data)
-     It contains the modules for processing the data related to the Pre DRC crawl. There are 4 files: 
+     It contains the module for processing the data related to the Pre DRC crawl. There are 4 files: 
       * \_\_init\_\_.py:  
       * news_data.py: containing classes for handling news articles in Pre DRC data 
       * query.py: processing the queries in the query file of the Pre DRC data 
       * path.json: json format file containing the paths for Pre DRC data
    * [data/drc_data](https://github.com/lukuang/InfoChain/blob/master/data/drc_data)
-     It contains the modules for processing the data related to the DRC crawl. There are 4 files: 
+     It contains the module for processing the data related to the DRC crawl. There are 4 files: 
       * \_\_init\_\_.py:  
       * news_data.py: containing classes for handling news articles in DRC data set 
-      * twitter_data.py: intended for processing DRC tweet data, not finished yet 
+      * twitter_data.py: intended for processing DRC tweet data, not implemented yet 
       * query.py: processing the queries in the query file of the DRC data
       * path.json: json format file containing the paths for DRC data
       
-  And two python scripts [easy_baseline/get_pre_drc_news_text.py](https://github.com/lukuang/InfoChain/blob/master/easy_baseline/get_pre_drc_news_text.py) and [easy_baseline/get_drc_news_text.py](https://github.com/lukuang/InfoChain/blob/master/easy_baseline/get_drc_news_text.py) for generating trec format text files for these two data set in preparation for building an Indri index from them. For these two scripts, two parameters can be taken:
+  And two python scripts [easy_baseline/get_pre_drc_news_text.py](https://github.com/lukuang/InfoChain/blob/master/easy_baseline/get_pre_drc_news_text.py) and [easy_baseline/get_drc_news_text.py](https://github.com/lukuang/InfoChain/blob/master/easy_baseline/get_drc_news_text.py) for generating trec format text files for these two data sets in preparation for building an Indri index from them. For these two scripts, two parameters can be taken:
   * dest_dr(required) : the destination directory for the text
-  * -dl (optional): the number of days from the beginning of a disaster that you want the news article to be from. If no limit is wanted, do not use this parameter.
+  * -dl (optional): the number of days from the beginning of a disaster that you want the news article to be included in the index. If no limit is wanted, do not use this parameter.
   
   For generating an Indri Index from the text files, please use the script [easy_baseline/generate_index_para.py](https://github.com/lukuang/InfoChain/blob/master/easy_baseline/generate_index_para.py), which takes three **required** parameters:  
   * index_path: the destination of the index that you want to generate  
@@ -85,18 +85,19 @@ The repository for the InfoChain Project
   ```$ IndriBuildIndex para_file_path```
   
   ### Easy Baseline
+  I implement a very simple implementation ([easy_baseline/easy_baseline.py](https://github.com/lukuang/InfoChain/blob/master/easy_baseline/easy_baseline.py)) to find common entities of two disaster instances that relies only on the occurrence counts of the entities.
   #### How it works
-  I implement a very simple implementation ([easy_baseline/easy_baseline.py](https://github.com/lukuang/InfoChain/blob/master/easy_baseline/easy_baseline.py)) to find common entities of two disaster instances that relies only on the occurrence counts. The workflow is as follow:  
-  1. A User will input two queries to the script.  
+  The workflow is as follow:  
+  1. A User will input two queries, and possible other optional parameters, to the script.  
   2. The script will search the two queries against the Indri index generated above.  
-  3. If there are common documents in the top 10 documents, return the document ids.
+  3. If there are common documents in the top 10 documents, return the common documents' ids.
   4. If there are no common documents, first generate the vector representations of each of the top 100 documents. The vectors are the occurrence counts of words or entities in the document. There are three ways to generate the vector:  
       * use individual words.  
       * use the name entities identified by Stanford NER.  
-      * use the entities found by the [Dbpedia Spotlight's](https://github.com/dbpedia-spotlight/dbpedia-spotlight) web api to find Wikipedia entities in the document.  
-  5. Merge the document vectors for each query. Compare the total vectors of the two queries to find common entities that within the 100 most frequent entities of each query. Record the entities and their **smaller** occurrence counts for one of the queries. 
+      * use the Wikipedia entities found by the [Dbpedia Spotlight's](https://github.com/dbpedia-spotlight/dbpedia-spotlight) web api in the document.
+  5. Merge the document vectors for each query. Compare the total vectors of the two queries to find common entities that are within the 100 most frequent entities of each query. Record the entities and their **smaller** occurrence counts for one of the queries. 
   6. The common entities will be printed to the standard output as (entity, smaller count) tuples.
-  7. The entities as well as the documents mentioning the entities will be output as a json format in the file  ```/infolab/node4/lukuang/code/InfoChain/easy_baseline/data/results/easy_basline/METHOD_NAME/QUERY_STRING``` where the ```METHOD_NAME``` is the method used for generating vectors (words, Stanford NER, etc.), and the ```QUERY_STRING``` is the combination of the query strings in which the queries are ordered alphabetically in order to be combined.
+  7. The entities as well as the ids of the documents mentioning the entities will be output as json format in the file  ```/infolab/node4/lukuang/code/InfoChain/easy_baseline/data/results/easy_basline/METHOD_NAME/QUERY_STRING``` where the ```METHOD_NAME``` is the method used for generating vectors (words, Stanford NER, etc.), and the ```QUERY_STRING``` is the concatenation of the query strings in which the queries are ordered alphabetically in order to be combined.
   
   #### How to run
   Two required parameters:   
@@ -104,23 +105,25 @@ The repository for the InfoChain Project
   * query_2
     
   Optional parameters:  
-  * -td: top document count, the number of documents in which the script tries to find common documents  
-  * -cd: common info doc count, the number of documents in which the script tries to find common entities  
-  * -nt: number of top common info: the number of most frequent entities to be considered when finding common entities. For instance, if it is specified as 100, the most frequent 100 entities of each query will be compared and the common entities will be printed out   
+  * -td: top document count, the number of top documents in which the script tries to find common documents. The default is 10.  
+  * -cd: common info doc count, the number of documents in which the script tries to find common entities. The default is 100.  
+  * -nt: number of top common info: the number of most frequent entities to be considered when finding common entities. For instance, if it is specified as 100, the most frequent 100 entities of each query will be compared and the common entities will be used as output. The default is 100.   
   * *-vm*: vector method, what kind of vectors to be generated. The input options are:  
-    * 0: words  
-    * 1: Stanford NER  
-    * 2: Dbpedia Spotlight  
+      * 0: words  
+      * 1: Stanford NER  
+      * 2: Dbpedia Spotlight 
+      
+    The default value is 0 (words).
   * -rd: result dir, the result directory that the entities as well as the documents containing them should be stored to  
   * -vd: vector dir, the vector directory that the intermediate document vector results will be stored to.  
   * -ind: index dir, the index directory that the queries will be searched against.  
   * -tqf: temporal query file, the temporal Indri query parameter file
   
   #### Some advice
-  Feel free to execute multiple instances with **different** vector method. However, executing multiple instances with same vector might be a bad idea since they might try to read/write the document vector information at the same time.
+  Feel free to execute multiple instances with **different** vector method. However, executing multiple instances with same vector method might be a bad idea since they might try to read/write the document vector information at the same time.
   
   #### Extra utilities
-  There is a script [easy_baseline/view_entity.py](https://github.com/lukuang/InfoChain/blob/master/easy_baseline/view_entity.py) through which you can show the surrounding  text of a common entities to get an idea about how the entity is used in the two disasters. There are three parameters of it:  
+  There is a script [easy_baseline/view_entity.py](https://github.com/lukuang/InfoChain/blob/master/easy_baseline/view_entity.py) through which you can show the surrounding  text of a common entity for both queries to get an idea about how the entity is used in the two disasters. There are three parameters of it:  
   * disaster_vector_result_file (required): the result file generated by easy_baseline.py  
   * entity (required): the name of the entity that you want to show
   * -ind (optional): the Indri index path
