@@ -186,9 +186,9 @@ class Vectors(object):
         else:
             raise ValueError("The qid %s is mal-formatted" %(qid))
 
-    def try_to_load(self,top_documents):
-        for input_qid in top_documents:
-            for did in top_documents[input_qid]:
+    def try_to_load(self,results):
+        for input_qid in results:
+            for did in results[input_qid]:
                 qid = self._get_qid_from_did(did)             
                 if qid not in self._vectors: 
                     self._vectors[qid] = {}
@@ -228,8 +228,8 @@ class Vectors(object):
 
 
 def generate_temp_query_file(index_dir,temp_query_file,
-                             result_count,query_1,query_2):
-    query_factory = IndriQueryFactory(result_count,rule="f2exp")
+                             common_info_doc_count,query_1,query_2):
+    query_factory = IndriQueryFactory(common_info_doc_count,rule="f2exp")
     queries = {
         "1":query_1,
         "2": query_2
@@ -306,20 +306,20 @@ def get_word_vector_from_did(did,index_dir):
     return words
 
 
-def get_top_documents(results,common_info_doc_count):
-    top_documents = {}
-    for qid in results:
-        top_documents[qid] = results[qid][:common_info_doc_count]
+# def get_top_documents(results,common_info_doc_count):
+#     top_documents = {}
+#     for qid in results:
+#         top_documents[qid] = results[qid][:common_info_doc_count]
     
-    return top_documents
+#     return top_documents
 
-def get_top_vector(top_documents,vectors):
+def get_top_vector(results,vectors):
     total_vectors = {}
     top_document_vectors = {}
-    for qid in top_documents:
+    for qid in results:
         total_vectors[qid] = {}
         top_document_vectors[qid] = {}
-        for did in top_documents[qid]:
+        for did in results[qid]:
             top_document_vectors[qid][did] = vectors[did]
             for w in top_document_vectors[qid][did]:
                 if w in total_vectors[qid]:
@@ -384,7 +384,6 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("query_1")
     parser.add_argument("query_2")
-    parser.add_argument("--result_count","-rc",type=int,default=1000)
     parser.add_argument("--top_document_count","-td",type=int,default=10)
     parser.add_argument("--common_info_doc_count","-cd",type=int,default=100)
     parser.add_argument("--num_of_top_common_info","-nt",type=int,default=100)
@@ -405,7 +404,7 @@ def main():
     
 
     generate_temp_query_file(args.index_dir,args.temp_query_file,
-                             args.result_count,args.query_1,args.query_2)
+                             args.common_info_doc_count,args.query_1,args.query_2)
 
     results = run_temp_query(args.temp_query_file)
     # print results
@@ -424,12 +423,12 @@ def main():
 
     else:
         print "no common in top %d documents" %(args.top_document_count)
-        top_documents = get_top_documents(results,args.common_info_doc_count)
+        # top_documents = get_top_documents(results,args.common_info_doc_count)
 
         vectors = Vectors(args.vector_method,args.vector_dir,args.index_dir,query_suffix)
-        vectors.try_to_load(top_documents)
+        vectors.try_to_load(results)
         vectors.store()
-        top_document_vectors, total_vectors = get_top_vector(top_documents,vectors)
+        top_document_vectors, total_vectors = get_top_vector(results,vectors)
 
         # if args.vector_method == VectorMethod.use_words:
         #     top_document_vectors, total_vectors = get_top_document_word_vector(
