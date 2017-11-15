@@ -14,6 +14,8 @@ The repository for the InfoChain Project
     - [Easy baseline](#drc)
       - [How it works](#how-it-works)
       - [How to run](#how-to-run)
+      - [Some advice](#some-advice)
+      - [Extra utilities](#extra-utilities)
     
     
     
