@@ -109,7 +109,7 @@ class StanfordEntityGenerator(EntityGenerator):
 class DbpediaEntityGenerator(EntityGenerator):
     def __init__(self,index_dir,query_suffix):
         super(DbpediaEntityGenerator,self).__init__(index_dir)
-        self._temp_file = "/tmp/ner_temp-"+query_suffix+".txt"
+        self._temp_file = "/tmp/dbpedia_temp-"+query_suffix+".txt"
         self._run_command = ["bash","/infolab/node4/lukuang/code/stanford-ner-2017-06-09/parse.sh","%s" %(self._temp_file)]
         self._url_base = "http://model.dbpedia-spotlight.org/en/annotate"
         self._headers = {'accept': 'application/json'}
