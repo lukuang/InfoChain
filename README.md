@@ -120,7 +120,7 @@ The repository for the InfoChain Project
   * -tqf: temporal query file, the temporal Indri query parameter file
   
   #### Some advice
-  Feel free to execute multiple instances with **different** vector method. However, executing multiple instances with same vector method might be a bad idea since they might try to read/write the document vector information at the same time.
+  Feel free to execute multiple instances with **different** vector methods. However, executing multiple instances with same vector method might be a bad idea since they might try to read/write the document vector information at the same time.
   
   #### Extra utilities
   There is a script [easy_baseline/view_entity.py](https://github.com/lukuang/InfoChain/blob/master/easy_baseline/view_entity.py) through which you can show the surrounding  text of a common entity for both queries to get an idea about how the entity is used in the two disasters. There are three parameters of it:  
