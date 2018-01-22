@@ -1,3 +1,4 @@
 *.pyc
+storage
 easy_baseline/data
 try_rnn/data
