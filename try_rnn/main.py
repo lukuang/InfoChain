@@ -2,6 +2,8 @@
 import argparse
 import time
 import math
+import os
+import json
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -40,9 +42,36 @@ parser.add_argument('--cuda', action='store_true',
                     help='use CUDA')
 parser.add_argument('--log-interval', type=int, default=200, metavar='N',
                     help='report interval')
-parser.add_argument('--save', type=str,  default='model.pt',
-                    help='path to save the final model')
+parser.add_argument('--save_dir', type=str,
+                    help='path to save the final model and training configuration')
 args = parser.parse_args()
+
+
+# Store the training configuration
+training_config = {}
+training_config['corpus_path'] = os.path.abspath(args.data)
+training_config['model_type'] = args.model
+training_config['emsize'] = args.emsize
+training_config['nhid'] = args.nhid
+training_config['nlayers'] = args.nlayers
+training_config['lr'] = args.lr
+training_config['clip'] = args.clip
+training_config['epochs'] = args.epochs
+training_config['batch_size'] = args.batch_size
+training_config['bptt'] = args.bptt
+training_config['dropout'] = args.dropout
+training_config['tied'] = args.tied
+training_config['seed'] = args.seed
+training_config['cuda'] = args.cuda
+training_config['log_interval'] = args.log_interval
+
+# Set the saving paths
+model_dest = os.path.join(args.save_dir,"model.ft")
+training_config_dest = os.path.join(args.save_dir,"training.config")
+
+# Store the training configuration so that the future testing can load
+with open(training_config_dest, "w") as training_config_file:
+    training_config_file.write(json.dumps(training_config,indent=4))
 
 # Set the random seed manually for reproducibility.
 torch.manual_seed(args.seed)
@@ -141,6 +170,7 @@ def evaluate(data_source):
     return total_loss[0] / len(data_source)
 
 
+
 def train():
     # Turn on training mode which enables dropout.
     model.train()
@@ -192,7 +222,7 @@ try:
         print('-' * 89)
         # Save the model if the validation loss is the best we've seen so far.
         if not best_val_loss or val_loss < best_val_loss:
-            with open(args.save, 'wb') as f:
+            with open(model_dest, 'wb') as f:
                 torch.save(model, f)
             best_val_loss = val_loss
         else:
@@ -203,7 +233,7 @@ except KeyboardInterrupt:
     print('Exiting from training early')
 
 # Load the best saved model.
-with open(args.save, 'rb') as f:
+with open(model_dest, 'rb') as f:
     model = torch.load(f)
 
 # Run on test data.
