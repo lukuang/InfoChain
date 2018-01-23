@@ -49,8 +49,8 @@ def main():
 
     # print topics
     print(ldamodel.print_topics(num_topics=3, num_words=10))
-    with open(os.path.join(args.dest_dir,"model.lda"), "rb") as of:
-        cPickle.dump(ldamodel, file)
+    with open(os.path.join(args.dest_dir,"model.lda"), "wb") as of:
+        cPickle.dump(ldamodel, of)
 
 if __name__=="__main__":
     main()
