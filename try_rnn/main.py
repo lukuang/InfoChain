@@ -89,7 +89,7 @@ if torch.cuda.is_available():
 
 corpus_file = os.path.join(os.path.abspath(args.data),"corpus")
 
-if os.path.exits(corpus_file):
+if os.path.exists(corpus_file):
     with open(corpus_file, "rb") as cf:
         corpus = cPickle.load(cf)
 else:
