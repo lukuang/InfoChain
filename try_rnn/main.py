@@ -4,6 +4,7 @@ import time
 import math
 import os
 import json
+import cPickle
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -85,7 +86,16 @@ if torch.cuda.is_available():
 # Load data
 ###############################################################################
 
-corpus = data.Corpus(args.data)
+
+corpus_file = os.path.join(os.path.abspath(args.data),"corpus")
+
+if os.path.exits(corpus_file):
+    with open(corpus_file, "rb") as cf:
+        corpus = cPickle.load(cf)
+else:
+    corpus = data.Corpus(args.data)
+    with open(corpus_file, "wb") as of:
+        cPickle.dump(corpus, of)
 
 # Starting from sequential data, batchify arranges the dataset into columns.
 # For instance, with the alphabet as the sequence and batch size 4, we'd get

@@ -8,6 +8,7 @@ import sys
 import re
 import argparse
 import codecs
+import cPickle
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -131,7 +132,16 @@ def main():
 
     training_config = namedtuple( "TrainingConfig", training_config.keys())(**training_config)
 
-    corpus = data.Corpus(training_config.corpus_path)
+
+    corpus_file = os.path.join(training_config.corpus_path,"corpus")
+    if os.path.exists(corpus_file):
+        with open(corpus_file, "rb") as cf:
+            corpus = cPickle.load(cf)
+    else:
+        corpus = data.Corpus(training_config.corpus_path)
+        with open(corpus_file, "wb") as cf:
+            cPickle.dump(corpus, cf)
+
     eval_batch_size = 10
     train_data = batchify(corpus.train, training_config.batch_size)
     val_data = batchify(corpus.valid, eval_batch_size)
