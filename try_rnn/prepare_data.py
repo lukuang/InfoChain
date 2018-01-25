@@ -5,11 +5,16 @@ prepare data
 import os
 import json
 import sys
+reload(sys)  
+sys.setdefaultencoding('utf8')
 import re
 import argparse
 import codecs
+import string
 from random import shuffle
 
+def add_space(match_obj):
+    return " %s " %(match_obj.group(1))
 
 def parse_trec_doc(doc_path):
     doc_string = ""
@@ -18,6 +23,7 @@ def parse_trec_doc(doc_path):
 
     documents = []
     for doc_text in re.findall("<TEXT>(.+?)</TEXT>", doc_string,flags=re.DOTALL):
+        doc_text = re.sub("([%s])" %(string.punctuation),add_space,doc_text)
         documents.append( re.sub("\s+"," ",doc_text))
     print "\tThere are %d documents" %(len(documents))
     return documents
@@ -59,7 +65,7 @@ def main():
 
     if args.format == 0:
         dest_file = os.path.join(args.dest_path,"documents")
-        with open(dest_file, "w") as of:
+        with codecs.open(dest_file, "w","utf-8") as of:
             of.write(json.dumps(documents))
     else:
         train_file = os.path.join(args.dest_path,"train.txt")
