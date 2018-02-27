@@ -9,20 +9,18 @@ class RNNModel(nn.Module):
         super(RNNModel, self).__init__()
         self.drop = nn.Dropout(dropout)
         self.n_topics = n_topics
-        self.encoder = []
-        self.decoder = []
-        self.rnn_cell = []
+        self.encoder = nn.ModuleList([nn.Embedding(ntoken, ninp) for i in range(n_topics)])
+        self.decoder = nn.ModuleList([nn.Linear(nhid, ntoken) for i in range(n_topics)])
         self.smx = nn.Softmax(dim=1)
         self.topic_generator = nn.Linear(nhid, self.n_topics)
-        for i in range(n_topics):
-            self.encoder.append(nn.Embedding(ntoken, ninp))
-            self.decoder.append(nn.Linear(nhid, ntoken))
+        
 
         if rnn_type in ['LSTM', 'GRU']:
             rnn_type += 'Cell'
-            self.rnn_cell.append(getattr(nn, rnn_type)(ninp, nhid))
-            for m in range(1,nlayers):
-                self.rnn_cell.append( getattr(nn, rnn_type)(nhid, nhid))
+            self.first_rnn_cell = getattr(nn, rnn_type)(ninp, nhid)
+            if nlayers > 1:
+                self.subsequent_rnn_cell = nn.ModuleList([ getattr(nn, rnn_type)(nhid, nhid) for i in range(nlayers-1)])
+            
             # self.rnn = getattr(nn, rnn_type)(ninp, nhid, nlayers, dropout=dropout)
         else:
             raise NotImplemented("Raw RNN is not implemented!")
@@ -80,22 +78,23 @@ class RNNModel(nn.Module):
                     else:
                         emb = emb.clone().add( topic_emb)
 
-                new_hx, new_cx = self.rnn_cell[0](emb.clone(), (hx[0].clone(), cx[0].clone()) )
+                new_hx, new_cx = self.first_rnn_cell(emb.clone(), (hx[0].clone(), cx[0].clone()) )
                 new_hx = self.drop(new_hx)
                 new_cx = self.drop(new_cx)
                 new_hx = new_hx.unsqueeze(0)
                 new_cx = new_cx.unsqueeze(0)
 
-                for n in range(1,self.nlayers):
-                    layer_hx, layer_cx= self.rnn_cell[n](hx[n-1], (hx[n], cx[n]) )
-                    layer_hx = self.drop(layer_hx)
-                    layer_cx = self.drop(layer_cx)
-                    layer_hx = layer_hx.unsqueeze(0)
-                    layer_cx = layer_cx.unsqueeze(0)
+                if self.nlayers > 1:
+                    for n in range(1,self.nlayers):
+                        layer_hx, layer_cx= self.subsequent_rnn_cell[n-1](hx[n-1], (hx[n], cx[n]) )
+                        layer_hx = self.drop(layer_hx)
+                        layer_cx = self.drop(layer_cx)
+                        layer_hx = layer_hx.unsqueeze(0)
+                        layer_cx = layer_cx.unsqueeze(0)
 
-                    new_hx = torch.cat((new_hx.clone(),layer_hx.clone()))
-                    new_cx = torch.cat((new_cx.clone(),layer_cx.clone()))
-                
+                        new_hx = torch.cat((new_hx.clone(),layer_hx.clone()))
+                        new_cx = torch.cat((new_cx.clone(),layer_cx.clone()))
+
                 output_topic_decoded = self.topic_generator(new_hx[-1])
                 output_topic_dist =  self.smx(output_topic_decoded)
 
