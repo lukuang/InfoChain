@@ -1,0 +1,131 @@
+import torch
+import torch.nn as nn
+from torch.autograd import Variable
+
+class RNNModel(nn.Module):
+    """Container module with an encoder, a recurrent module, and a decoder."""
+
+    def __init__(self, rnn_type, ntoken, ninp, nhid, nlayers, dropout=0.5, tie_weights=False,n_topics=2):
+        super(RNNModel, self).__init__()
+        self.drop = nn.Dropout(dropout)
+        self.n_topics = n_topics
+        self.encoder = []
+        self.decoder = []
+        self.rnn_cell = []
+        self.smx = nn.Softmax(dim=1)
+        self.topic_generator = nn.Linear(nhid, self.n_topics)
+        for i in range(n_topics):
+            self.encoder.append(nn.Embedding(ntoken, ninp))
+            self.decoder.append(nn.Linear(nhid, ntoken))
+
+        if rnn_type in ['LSTM', 'GRU']:
+            rnn_type += 'Cell'
+            self.rnn_cell.append(getattr(nn, rnn_type)(ninp, nhid))
+            for m in range(1,nlayers):
+                self.rnn_cell.append( getattr(nn, rnn_type)(nhid, nhid))
+            # self.rnn = getattr(nn, rnn_type)(ninp, nhid, nlayers, dropout=dropout)
+        else:
+            raise NotImplemented("Raw RNN is not implemented!")
+            try:
+                nonlinearity = {'RNN_TANH': 'tanh', 'RNN_RELU': 'relu'}[rnn_type]
+            except KeyError:
+                raise ValueError( """An invalid option for `--model` was supplied,
+                                 options are ['LSTM', 'GRU', 'RNN_TANH' or 'RNN_RELU']""")
+            self.rnn = nn.RNN(ninp, nhid, nlayers, nonlinearity=nonlinearity, dropout=dropout)
+
+
+        # Optionally tie weights as in:
+        # "Using the Output Embedding to Improve Language Models" (Press & Wolf 2016)
+        # https://arxiv.org/abs/1608.05859
+        # and
+        # "Tying Word Vectors and Word Classifiers: A Loss Framework for Language Modeling" (Inan et al. 2016)
+        # https://arxiv.org/abs/1611.01462
+        if tie_weights:
+            if nhid != ninp:
+                raise ValueError('When using the tied flag, nhid must be equal to emsize')
+            for i in range(n_topics):
+                self.decoder[i].weight = self.encoder[i].weight
+
+        self.init_weights()
+
+        self.rnn_type = rnn_type
+        self.ntoken = ntoken
+        self.nhid = nhid
+        self.ninp = ninp
+        self.nlayers = nlayers
+
+    def init_weights(self):
+        initrange = 0.1
+        for i in range(self.n_topics):
+
+            self.encoder[i].weight.data.uniform_(-initrange, initrange)
+            self.decoder[i].bias.data.fill_(0)
+            self.decoder[i].weight.data.uniform_(-initrange, initrange)
+
+        self.topic_generator.weight.data.uniform_(-initrange, initrange)
+
+    def forward(self, input, hidden):
+        if self.rnn_type == 'LSTMCell':
+            hx = hidden[0]
+            cx = hidden[1]
+            for m in range(input.size(0)):
+                input_topic_decoded = self.topic_generator(hx[-1])
+                input_topic_dist =  self.smx(input_topic_decoded)
+                for i in range(self.n_topics):
+                    topic_emb = self.drop(self.encoder[i](input[m]))
+                    for j in range(input_topic_dist.size(0)):
+                        topic_emb[j] = topic_emb[j].clone().mul(input_topic_dist[j][i])
+                    if i == 0:
+                        emb = topic_emb.clone()
+                    else:
+                        emb = emb.clone().add( topic_emb)
+
+                new_hx, new_cx = self.rnn_cell[0](emb.clone(), (hx[0].clone(), cx[0].clone()) )
+                new_hx = self.drop(new_hx)
+                new_cx = self.drop(new_cx)
+                new_hx = new_hx.unsqueeze(0)
+                new_cx = new_cx.unsqueeze(0)
+
+                for n in range(1,self.nlayers):
+                    layer_hx, layer_cx= self.rnn_cell[n](hx[n-1], (hx[n], cx[n]) )
+                    layer_hx = self.drop(layer_hx)
+                    layer_cx = self.drop(layer_cx)
+                    layer_hx = layer_hx.unsqueeze(0)
+                    layer_cx = layer_cx.unsqueeze(0)
+
+                    new_hx = torch.cat((new_hx.clone(),layer_hx.clone()))
+                    new_cx = torch.cat((new_cx.clone(),layer_cx.clone()))
+                
+                output_topic_decoded = self.topic_generator(new_hx[-1])
+                output_topic_dist =  self.smx(output_topic_decoded)
+
+                
+
+                # decoded = Variable( torch.FloatTensor(output_topic_dist.size(0),self.ntoken).zero_() )
+                for i in range(self.n_topics):
+                    topic_decoded = self.drop(self.decoder[i](new_hx[-1]))
+                    for j in range(input_topic_dist.size(0)):
+                        topic_decoded[j] = topic_decoded[j].clone().mul(output_topic_dist[j][i])
+                    # print topic_decoded.size()
+                    if i ==0:
+                        decoded = topic_decoded.clone()
+                    else:
+                        decoded = decoded.clone().add( topic_decoded)
+                
+                decoded = decoded.unsqueeze(0)
+                if m == 0:
+                    output = decoded.clone()
+                else:
+                    output = torch.cat((output.clone(),decoded.clone()))
+            # decoded = self.decoder(output.view(output.size(0)*output.size(1), output.size(2)))
+            # topic_decoded = self.topic_generator(output.view(output.size(0)*output.size(1), output.size(2)))
+            # topic_distribution = self.smx(topic_decoded).view(output.size(0), output.size(1),topic_decoded.size(1))
+            return output , (new_hx, new_cx)
+
+    def init_hidden(self, bsz):
+        weight = next(self.parameters()).data
+        if self.rnn_type == 'LSTMCell':
+            return (Variable(weight.new(self.nlayers, bsz, self.nhid).zero_()),
+                    Variable(weight.new(self.nlayers, bsz, self.nhid).zero_()))
+        else:
+            return Variable(weight.new(self.nlayers, bsz, self.nhid).zero_())
