@@ -45,6 +45,9 @@ class RNNModel(nn.Module):
     def _get_single_emb(self,m,input):
         return self.drop(self.encoder(input[m]))
 
+    def _get_single_decoded(self,single_hx):
+        return self.decoder(single_hx)
+
     def forward(self, input, hidden):
         # emb = self.drop(self.encoder(input))
         hx = hidden[0]
@@ -70,16 +73,19 @@ class RNNModel(nn.Module):
             
 
             # output, hidden = self.rnn(emb, hidden)
+            single_hx = self.drop(new_hx[-1])
+            single_decoded = self._get_single_decoded(single_hx)
             if m==0:
-                output = new_hx[-1].unsqueeze(0)
+                decoded = single_decoded.unsqueeze(0)
             else:
-                output = torch.cat((output.clone(),new_hx[-1].unsqueeze(0)))
+                decoded = torch.cat((decoded.clone(),single_decoded.unsqueeze(0)))
 
 
-        output = self.drop(output)
+        # output = self.drop(output)
         hidden = (new_hx, new_cx)
-    	decoded = self.decoder(output.view(output.size(0)*output.size(1), output.size(2)))
-        return decoded.view(output.size(0), output.size(1), decoded.size(1)), hidden
+    	# decoded = self.decoder(output.view(output.size(0)*output.size(1), output.size(2)))
+        # return decoded.view(output.size(0), output.size(1), decoded.size(1)), hidden
+        return decoded, hidden
 
     def init_hidden(self, bsz):
         weight = next(self.parameters()).data
