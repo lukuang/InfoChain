@@ -134,7 +134,7 @@ test_data = batchify(corpus.test, eval_batch_size)
 ###############################################################################
 
 ntokens = len(corpus.dictionary)
-model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.tied)
+model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.tied, args.n_topics)
 if args.cuda:
     model.cuda()
 
@@ -200,7 +200,7 @@ def train():
         model.zero_grad()
         output, hidden = model(data, hidden)
         # output = output.view(-1)
-        print output.size()
+        #print output.size()
         loss = criterion(output.view(-1, ntokens), targets)
         loss.backward()
 
