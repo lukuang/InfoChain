@@ -67,9 +67,9 @@ class RNNModel(nn.Module):
 
             # output, hidden = self.rnn(emb, hidden)
             if m==0:
-                output = new_hx[-1]
+                output = new_hx[-1].unsqueeze(0)
             else:
-                output = torch.cat((output.clone(),new_hx[-1]))
+                output = torch.cat((output.clone(),new_hx[-1].unsqueeze(0)))
 
 
         output = self.drop(output)
