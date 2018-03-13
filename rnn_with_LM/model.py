@@ -70,12 +70,13 @@ class RNNModel(nn.Module):
             # print input.size()
             # print "hx size: " + str(hx.size())
             for m in range(input.size(0)):
-                input_topic_decoded = self.topic_generator(hx[0])
+                input_topic_decoded = self.topic_generator(self.drop(hx[0]))
                 input_topic_dist =  self.smx(input_topic_decoded)
                 # print "topic dist size: "+str(input_topic_dist.size())
                 # print input_topic_dist
+                dropout_input = self.drop(input[m])
                 for i in range(self.n_topics):
-                    topic_emb = self.encoder[i](self.drop(input[m]))
+                    topic_emb = self.encoder[i](dropout_input)
                     for j in range(input_topic_dist.size(0)):
                         topic_emb[j] = topic_emb[j].clone().mul(input_topic_dist[j][i])
                     if i == 0:
