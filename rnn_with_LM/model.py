@@ -67,11 +67,12 @@ class RNNModel(nn.Module):
         if self.rnn_type == 'LSTMCell':
             hx = hidden[0]
             cx = hidden[1]
-            #print input.size()
-            #print hx.size()
+            # print input.size()
+            print "hx size: " + str(hx.size())
             for m in range(input.size(0)):
                 input_topic_decoded = self.topic_generator(hx[0])
                 input_topic_dist =  self.smx(input_topic_decoded)
+                print "topic dist size: "+input_topic_dist.size()
                 for i in range(self.n_topics):
                     topic_emb = self.drop(self.encoder[i](input[m]))
                     for j in range(input_topic_dist.size(0)):
