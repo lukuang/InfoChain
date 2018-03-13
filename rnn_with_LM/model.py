@@ -68,14 +68,14 @@ class RNNModel(nn.Module):
             hx = hidden[0]
             cx = hidden[1]
             # print input.size()
-            print "hx size: " + str(hx.size())
+            # print "hx size: " + str(hx.size())
             for m in range(input.size(0)):
                 input_topic_decoded = self.topic_generator(hx[0])
                 input_topic_dist =  self.smx(input_topic_decoded)
-                print "topic dist size: "+str(input_topic_dist.size())
-                print input_topic_dist
+                # print "topic dist size: "+str(input_topic_dist.size())
+                # print input_topic_dist
                 for i in range(self.n_topics):
-                    topic_emb = self.drop(self.encoder[i](input[m]))
+                    topic_emb = self.encoder[i](self.drop(input[m]))
                     for j in range(input_topic_dist.size(0)):
                         topic_emb[j] = topic_emb[j].clone().mul(input_topic_dist[j][i])
                     if i == 0:
@@ -106,9 +106,10 @@ class RNNModel(nn.Module):
                 
 
                 # decoded = Variable( torch.FloatTensor(output_topic_dist.size(0),self.ntoken).zero_() )
+                output_hx = self.drop(new_hx[-1])
                 for i in range(self.n_topics):
-                    topic_decoded = self.drop(self.decoder[i](new_hx[-1]))
-                    for j in range(input_topic_dist.size(0)):
+                    topic_decoded = self.decoder[i](output_hx)
+                    for j in range(output_topic_dist.size(0)):
                         topic_decoded[j] = topic_decoded[j].clone().mul(output_topic_dist[j][i])
                     # print topic_decoded.size()
                     if i ==0:
