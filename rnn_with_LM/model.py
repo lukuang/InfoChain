@@ -70,7 +70,7 @@ class RNNModel(nn.Module):
             # print input.size()
             # print "hx size: " + str(hx.size())
             for m in range(input.size(0)):
-                input_topic_decoded = self.topic_generator(self.drop(hx[0]))
+                input_topic_decoded = self.drop( self.topic_generator(hx[0]) )
                 input_topic_dist =  self.smx(input_topic_decoded)
                 # print "topic dist size: "+str(input_topic_dist.size())
                 # print input_topic_dist
@@ -100,13 +100,13 @@ class RNNModel(nn.Module):
                         new_hx = torch.cat((new_hx.clone(),layer_hx.clone()))
                         new_cx = torch.cat((new_cx.clone(),layer_cx.clone()))
 
-                output_topic_decoded = self.topic_generator(new_hx[-1])
+                output_hx = self.drop(new_hx[-1])
+                output_topic_decoded = self.topic_generator(output_hx)
                 output_topic_dist =  self.smx(output_topic_decoded)
 
                 
 
                 # decoded = Variable( torch.FloatTensor(output_topic_dist.size(0),self.ntoken).zero_() )
-                output_hx = self.drop(new_hx[-1])
                 for i in range(self.n_topics):
                     topic_decoded = self.decoder[i](output_hx)
                     for j in range(output_topic_dist.size(0)):
