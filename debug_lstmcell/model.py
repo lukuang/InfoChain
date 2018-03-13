@@ -47,7 +47,7 @@ class RNNModel(nn.Module):
         hx = hidden[0]
         cx = hidden[1]
         for m in range(input.size(0)):
-            new_hx, new_cx = self.first_rnn_cell(emb[0], (hx[0],cx[0]))
+            new_hx, new_cx = self.first_rnn_cell(emb[m], (hx[0],cx[0]))
             new_hx = self.drop(new_hx)
             new_cx = self.drop(new_cx)
             new_hx = new_hx.unsqueeze(0)
@@ -66,13 +66,17 @@ class RNNModel(nn.Module):
             
 
             # output, hidden = self.rnn(emb, hidden)
-            output = new_hx[-1]
+            if m==0:
+                output = new_hx[-1]
+            else:
+                output = torch.cat((output.clone(),new_hx[-1]))
+
 
         output = self.drop(output)
         hidden = (new_hx, new_cx)
         print output.size()
         print self.decoder
-	decoded = self.decoder(output.view(output.size(0)*output.size(1), output.size(2)))
+    	decoded = self.decoder(output.view(output.size(0)*output.size(1), output.size(2)))
         #print output.size()
         #print self.decoder.size()
         return decoded.view(output.size(0), output.size(1), decoded.size(1)), hidden
