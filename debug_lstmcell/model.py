@@ -42,12 +42,16 @@ class RNNModel(nn.Module):
         self.decoder.bias.data.fill_(0)
         self.decoder.weight.data.uniform_(-initrange, initrange)
 
+    def _get_single_emb(self,m,input):
+        return self.drop(self.encoder(input[m]))
+
     def forward(self, input, hidden):
-        emb = self.drop(self.encoder(input))
+        # emb = self.drop(self.encoder(input))
         hx = hidden[0]
         cx = hidden[1]
         for m in range(input.size(0)):
-            new_hx, new_cx = self.first_rnn_cell(emb[m], (hx[0],cx[0]))
+            single_emb = self._get_single_emb(m,input)
+            new_hx, new_cx = self.first_rnn_cell(single_emb, (hx[0],cx[0]))
             new_hx = self.drop(new_hx)
             new_cx = self.drop(new_cx)
             new_hx = new_hx.unsqueeze(0)
