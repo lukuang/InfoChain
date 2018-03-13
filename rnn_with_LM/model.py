@@ -62,6 +62,7 @@ class RNNModel(nn.Module):
             self.decoder[i].weight.data.uniform_(-initrange, initrange)
 
         self.topic_generator.weight.data.uniform_(-initrange, initrange)
+        self.topic_generator.bias.data.fill_(0)
 
     def forward(self, input, hidden):
         if self.rnn_type == 'LSTMCell':
