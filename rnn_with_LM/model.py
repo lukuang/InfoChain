@@ -74,10 +74,8 @@ class RNNModel(nn.Module):
                 input_topic_dist =  self.smx(input_topic_decoded)
                 # print "topic dist size: "+str(input_topic_dist.size())
                 # print input_topic_dist
-                print input
-                dropout_input = self.drop(input[m])
                 for i in range(self.n_topics):
-                    topic_emb = self.encoder[i](dropout_input)
+                    topic_emb = self.drop(self.encoder[i](input[m]))
                     for j in range(input_topic_dist.size(0)):
                         topic_emb[j] = topic_emb[j].clone().mul(input_topic_dist[j][i])
                     if i == 0:
