@@ -70,9 +70,11 @@ class RNNModel(nn.Module):
 
         output = self.drop(output)
         hidden = (new_hx, new_cx)
-        decoded = self.decoder(output.view(output.size(0)*output.size(1), output.size(2)))
         print output.size()
-        print self.decoder.size()
+        print self.decoder
+	decoded = self.decoder(output.view(output.size(0)*output.size(1), output.size(2)))
+        #print output.size()
+        #print self.decoder.size()
         return decoded.view(output.size(0), output.size(1), decoded.size(1)), hidden
 
     def init_hidden(self, bsz):
