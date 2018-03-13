@@ -119,6 +119,8 @@ class RNNModel(nn.Module):
                     output = decoded.clone()
                 else:
                     output = torch.cat((output.clone(),decoded.clone()))
+                hx = new_hx
+                cx = new_cx
             # decoded = self.decoder(output.view(output.size(0)*output.size(1), output.size(2)))
             # topic_decoded = self.topic_generator(output.view(output.size(0)*output.size(1), output.size(2)))
             # topic_distribution = self.smx(topic_decoded).view(output.size(0), output.size(1),topic_decoded.size(1))
