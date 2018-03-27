@@ -71,7 +71,7 @@ class RNNModel(nn.Module):
             # print input.size()
             # print "hx size: " + str(hx.size())
             for m in range(input.size(0)):
-                input_topic_decoded = self.drop( self.topic_generator(hx[0]) )
+                input_topic_decoded = self.drop( self.topic_generator(hx[-1]) )
                 input_topic_dist =  self.smx(input_topic_decoded)
                 # print "topic dist size: "+str(input_topic_dist.size())
                 # print input_topic_dist
