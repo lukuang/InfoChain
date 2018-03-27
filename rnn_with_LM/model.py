@@ -14,7 +14,7 @@ class RNNModel(nn.Module):
         self.decoder = nn.ModuleList([nn.Linear(nhid, ntoken) for i in range(n_topics)])
         self.smx = nn.Softmax(dim=1)
         self.topic_generator = nn.Linear(nhid, self.n_topics)
-        
+        self._is_first_input = False
 
         if rnn_type in ['LSTM', 'GRU']:
             rnn_type += 'Cell'
@@ -71,8 +71,16 @@ class RNNModel(nn.Module):
             # print input.size()
             # print "hx size: " + str(hx.size())
             for m in range(input.size(0)):
-                input_topic_decoded = self.drop( self.topic_generator(hx[-1]) )
-                input_topic_dist =  self.smx(input_topic_decoded)
+                if self._is_first_input:
+                    # When it is the first batch feed into the e
+                    print "First time training. Use uniform topic distribution"
+                    input_topic_dist = torch.FloatTensor(hx.size()[1],self.n_topics)
+                    input_topic_dist.fill_(1.0/self.n_topics)
+                    # input_topic_dist = Variable(input_topic_dist.clone())
+                    self._is_first_input = False
+                else:
+                    input_topic_decoded = self.drop( self.topic_generator(hx[-1]) )
+                    input_topic_dist =  self.smx(input_topic_decoded)
                 # print "topic dist size: "+str(input_topic_dist.size())
                 # print input_topic_dist
                 for i in range(self.n_topics):
@@ -87,30 +95,33 @@ class RNNModel(nn.Module):
                 emb = self.drop(emb)
                 
                 new_hx, new_cx = self.first_rnn_cell(emb.clone(), (hx[0].clone(), cx[0].clone()) )
-                new_hx = self.drop(new_hx)
-                new_cx = self.drop(new_cx)
+                if self.nlayers > 1:
+                    new_hx = self.drop(new_hx)
+                    new_cx = self.drop(new_cx)
                 new_hx = new_hx.unsqueeze(0)
                 new_cx = new_cx.unsqueeze(0)
 
                 if self.nlayers > 1:
                     for n in range(1,self.nlayers):
                         layer_hx, layer_cx= self.subsequent_rnn_cell[n-1](hx[n-1], (hx[n], cx[n]) )
-                        layer_hx = self.drop(layer_hx)
-                        layer_cx = self.drop(layer_cx)
+                        if n != self.nlayers-1:
+                            layer_hx = self.drop(layer_hx)
+                            layer_cx = self.drop(layer_cx)
                         layer_hx = layer_hx.unsqueeze(0)
                         layer_cx = layer_cx.unsqueeze(0)
 
                         new_hx = torch.cat((new_hx.clone(),layer_hx.clone()))
                         new_cx = torch.cat((new_cx.clone(),layer_cx.clone()))
 
-                output_topic_decoded = self.topic_generator(new_hx[-1])
+                temp_output = self.drop(new_hx[-1])
+                output_topic_decoded = self.topic_generator(temp_output)
                 output_topic_dist =  self.smx(output_topic_decoded)
 
                 
 
                 # decoded = Variable( torch.FloatTensor(output_topic_dist.size(0),self.ntoken).zero_() )
                 for i in range(self.n_topics):
-                    topic_decoded = self.decoder[i](new_hx[-1])
+                    topic_decoded = self.decoder[i](temp_output)
                     for j in range(output_topic_dist.size(0)):
                         topic_decoded[j] = topic_decoded[j].clone().mul(output_topic_dist[j][i])
                     # print topic_decoded.size()
@@ -129,10 +140,11 @@ class RNNModel(nn.Module):
             # decoded = self.decoder(output.view(output.size(0)*output.size(1), output.size(2)))
             # topic_decoded = self.topic_generator(output.view(output.size(0)*output.size(1), output.size(2)))
             # topic_distribution = self.smx(topic_decoded).view(output.size(0), output.size(1),topic_decoded.size(1))
-            return output , (new_hx, new_cx)
+            return output , (hx, cx)
 
     def init_hidden(self, bsz):
         weight = next(self.parameters()).data
+        self._is_first_input = True
         if self.rnn_type == 'LSTMCell':
             return (Variable(weight.new(self.nlayers, bsz, self.nhid).zero_()),
                     Variable(weight.new(self.nlayers, bsz, self.nhid).zero_()))
