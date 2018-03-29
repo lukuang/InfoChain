@@ -36,9 +36,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("src_path")
     parser.add_argument("dest_path")
-    parser.add_argument("-n",'--number-of-docs',type=int,default=1000,
+    parser.add_argument("-ndocs",'--number-of-docs',type=int,default=1000,
         help="number of docs used for generating the data")
-    parser.add_argument("-n",'--number-of-days',type=int)
+    parser.add_argument("-ndays",'--number-of-days',type=int)
     parser.add_argument("-r","--random",action="store_true",
         help="whether the text would be generated in random")
     parser.add_argument("--format",type=int,choices=[0,1],default=0,
