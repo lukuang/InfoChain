@@ -1,3 +1,4 @@
+# encoding: utf-8
 """
 prepare data
 """
@@ -12,14 +13,14 @@ import argparse
 import codecs
 import string
 from random import shuffle
-rom nltk.tokenize import sent_tokenize
+from nltk.tokenize import sent_tokenize
 
 def add_space(match_obj):
     return " %s " %(match_obj.group(1))
 
 def parse_trec_doc(doc_path,doc_count):
     doc_string = ""
-    with open(doc_path, "r") as f:
+    with codecs.open(doc_path, "r","utf-8") as f:
         doc_string =  f.read()
 
     sentences = []
@@ -30,7 +31,7 @@ def parse_trec_doc(doc_path,doc_count):
         if doc_count == 0:
             break
     print "\tThere are %d sentences" %(len(sentences))
-    return sentences
+    return sentences, doc_count
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -73,8 +74,12 @@ def main():
                 print "\tprocess file %s" %(day_file)
                 new_sentences,doc_count = parse_trec_doc(day_file,doc_count)
                 sentences += new_sentences
+                print "\t%d documents left" %(doc_count)
+                if doc_count == 0:
+                    break
 
     if args.random:
+        print "Shuffle Sentences"
         shuffle(sentences)
 
     if args.format == 0:
