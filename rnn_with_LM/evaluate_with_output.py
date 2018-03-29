@@ -16,18 +16,45 @@ from torch.autograd import Variable
 from collections import namedtuple
 import data
 
+import copy
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 from random import randint
 
 
 DICTIONARY = {}
 
-def batchify(data, bsz):
+def get_gpu_memory_map():
+    """Get the current gpu usage.
+
+    Returns
+    -------
+    usage: dict
+        Keys are device ids as integers.
+        Values are memory usage as integers in MB.
+    """
+    result = subprocess.check_output(
+        [
+            'nvidia-smi', '--query-gpu=memory.used',
+            '--format=csv,nounits,noheader'
+        ])
+    # Convert lines into a dictionary
+    gpu_memory = [int(x) for x in result.strip().split('\n')]
+    gpu_memory_map = dict(zip(range(len(gpu_memory)), gpu_memory))
+    return gpu_memory_map
+    
+def batchify(data, bsz,cuda):
     # Work out how cleanly we can divide the dataset into bsz parts.
     nbatch = data.size(0) // bsz
     # Trim off any extra elements that wouldn't cleanly fit (remainders).
     data = data.narrow(0, 0, nbatch * bsz)
     # Evenly divide the data across the bsz batches.
     data = data.view(bsz, -1).t().contiguous()
+
+    if cuda:
+        data = data.cuda()
     
     return data
 
@@ -63,7 +90,7 @@ def printnorm(self, input, output):
 def check_tagret(targets,required_word_index,position,eval_batch_size,bptt):
     for batch_position in range(eval_batch_size):
         for required_word_position in range(bptt):
-            if targets[batch_position+required_word_position*eval_batch_size] == required_word_index:
+            if targets[batch_position+required_word_position*eval_batch_size].data.cpu().numpy() == required_word_index:
                 return required_word_position,batch_position
     return None, None
 
@@ -73,15 +100,31 @@ def evaluate_all(data_source,model,corpus,bptt,eval_batch_size):
     criterion = nn.CrossEntropyLoss()
     total_loss = 0
     ntokens = len(corpus.dictionary)
+
+    topic_generator = copy.deepcopy(model.topic_generator)
+    smx = copy.deepcopy(model.smx)
+    n_topics = model.n_topics
+    topic_dist_stats = [[] for i in range(n_topics)]
+
     hidden = model.init_hidden(eval_batch_size)
     for i in range(0, data_source.size(0) - 1, bptt):
         data, targets = get_batch(data_source, i, bptt,evaluation=True)
         output, hidden = model(data, hidden)
         output_flat = output.view(-1, ntokens)
-        # print('output_flat size:', output_flat.data.size())
-        # print output.data[0]
         total_loss += len(data) * criterion(output_flat, targets).data
+        output_topic_decoded = topic_generator(hidden[0][-1])
+        output_topic_dist =  smx(output_topic_decoded)
+        for m in range(output_topic_dist.size(0)):
+            for n in range(n_topics):
+                value = float(output_topic_dist[m][n])
+                topic_dist_stats[n].append(value)
         hidden = repackage_hidden(hidden)
+
+    for j in range(n_topics):
+        plt.hist(topic_dist_stats[j],10,rwidth=0.8)
+        plt.savefig("%s.png" %(str(j)))
+        plt.clf()
+
     return total_loss[0] / len(data_source)
 
 def evaluate_small_sample(data_source,model,corpus,bptt,eval_batch_size,required_word_index, position,index):
@@ -174,9 +217,9 @@ def main():
             cPickle.dump(corpus, cf)
 
     eval_batch_size = 10
-    train_data = batchify(corpus.train, training_config.batch_size)
-    val_data = batchify(corpus.valid, eval_batch_size)
-    test_data = batchify(corpus.test, eval_batch_size)
+    # train_data = batchify(corpus.train, training_config.batch_size)
+    # val_data = batchify(corpus.valid, eval_batch_size)
+    test_data = batchify(corpus.test, eval_batch_size,training_config.cuda)
     # print test_data.size()
     # print test_data
     # sys.exit()
@@ -197,7 +240,7 @@ def main():
         print corpus.dictionary.idx2word[word_index]
         possible_indecies = range(0, test_data.size(0) - 1, training_config.bptt)
         while number_of_sentence < 5:
-            i = randint(0, len(possible_indecies))
+            i = randint(0, len(possible_indecies)-1)
             batch_index = possible_indecies[i]
             # print "batch index: %d" %(batch_index)
             succeed  = evaluate_small_sample(test_data,model,corpus,
