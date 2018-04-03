@@ -92,14 +92,14 @@ def main():
         valid_file = os.path.join(args.dest_path,"valid.txt")
 
         with open(train_file,"w") as train_f:
-            train_f.write( "\n".join(sentences[:int(0.8*len(sentences))])+"\n" )
+            train_f.write( " ".join(sentences[:int(0.8*len(sentences))])+"\n" )
 
 
         with open(test_file,"w") as test_f:
-            test_f.write( "\n".join(sentences[int(0.8*len(sentences)) : int(0.9*len(sentences))]) +"\n")
+            test_f.write( " ".join(sentences[int(0.8*len(sentences)) : int(0.9*len(sentences))]) +"\n")
 
         with open(valid_file,"w") as valid_f:
-            valid_f.write( "\n".join(sentences[int(0.9*len(sentences)) : ]) +"\n")
+            valid_f.write( " ".join(sentences[int(0.9*len(sentences)) : ]) +"\n")
 
 
 
