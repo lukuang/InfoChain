@@ -134,9 +134,13 @@ test_data = batchify(corpus.test, eval_batch_size)
 ###############################################################################
 
 ntokens = len(corpus.dictionary)
-model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.tied, args.n_topics)
-if args.cuda:
-    model.cuda()
+if os.path.exists(model_dest):
+    with open(model_dest, 'rb') as f:
+        model = torch.load(f)
+else:
+    model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.tied, args.n_topics)
+    if args.cuda:
+        model.cuda()
 
 criterion = nn.CrossEntropyLoss()
 
