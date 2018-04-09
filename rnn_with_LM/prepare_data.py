@@ -15,6 +15,29 @@ import string
 from random import shuffle
 from nltk.tokenize import sent_tokenize
 
+def alternative_mix(long_list,short_list):
+    """
+    mix two lists by alterantively append elements
+    from two lists
+    """
+    mixed = []
+
+    for i in range(len(short_list)):
+        # use the same number of sentences from two
+        # instances
+        mixed.append(long_list[i])
+        mixed.append(short_list[i])
+    return mixed
+
+def mix_two_list(list1, list2):
+    
+    if len(list1) >= len(list2):
+        return alternative_mix(list1, list2)
+    else:
+        return alternative_mix(list2, list1)
+    
+
+
 def add_space(match_obj):
     return " %s " %(match_obj.group(1))
 
@@ -53,34 +76,40 @@ def main():
 
     args=parser.parse_args()
 
-    sentences = []
+    sentences_dict = {}
     for qid in os.walk(args.src_path).next()[1]:
         doc_count = args.number_of_docs
         if args.qids:
             if qid not in args.qids:
                 continue
         print "process qid: %s" %(qid)
-
+        sentences_dict[qid] = []
         dir_path = os.path.join(args.src_path,qid)
         if args.number_of_days:
             for day in sorted(os.walk(dir_path).next()[2])[:args.number_of_days]:
                 day_file = os.path.join(dir_path,day)
                 print "\tprocess file %s" %(day_file)
                 new_sentences,doc_count = parse_trec_doc(day_file,10000)
-                sentences += new_sentences
+                sentences_dict[qid] += new_sentences
         else:
             for day in sorted(os.walk(dir_path).next()[2]):
                 day_file = os.path.join(dir_path,day)
                 print "\tprocess file %s" %(day_file)
                 new_sentences,doc_count = parse_trec_doc(day_file,doc_count)
-                sentences += new_sentences
+                sentences_dict[qid] += new_sentences
                 print "\t%d documents left" %(doc_count)
                 if doc_count == 0:
                     break
 
+    sentences  = []
     if args.random:
         print "Shuffle Sentences"
-        shuffle(sentences)
+        sub_sentence_lists = sentences_dict.values()
+
+        sentences = mix_two_list(sub_sentence_lists[0], sub_sentence_lists[1])
+    else:
+        for qid in sentences_dict:
+            sentences += sentences_dict[qid]
 
     if args.format == 0:
         dest_file = os.path.join(args.dest_path,"sentences")
